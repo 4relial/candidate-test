@@ -197,20 +197,30 @@ class SupplierController extends Controller
      */
     private function redirectWithImportSummary(Supplier $supplier, array $summary): RedirectResponse
     {
+        $status = sprintf(
+            'Import completed: %d layup(s) created, %d layup(s) duplicated, %d layup(s) updated, %d layer(s) created, %d layer(s) updated, %d conflict(s) skipped.',
+            $summary['created_layups'],
+            $summary['duplicated_layups'],
+            $summary['updated_layups'],
+            $summary['created_layers'],
+            $summary['updated_layers'],
+            $summary['skipped_conflicts'],
+        );
+
+        if (
+            $summary['created_layups'] === 0
+            && $summary['duplicated_layups'] === 0
+            && $summary['updated_layups'] === 0
+            && $summary['created_layers'] === 0
+            && $summary['updated_layers'] === 0
+            && $summary['skipped_conflicts'] === 0
+        ) {
+            $status = 'Import completed: no changes detected. Existing layups and layers already match the JSON payload.';
+        }
+
         return redirect()
             ->route('suppliers.show', $supplier)
-            ->with(
-                'status',
-                sprintf(
-                    'Import completed: %d layup(s) created, %d layup(s) duplicated, %d layup(s) updated, %d layer(s) created, %d layer(s) updated, %d conflict(s) skipped.',
-                    $summary['created_layups'],
-                    $summary['duplicated_layups'],
-                    $summary['updated_layups'],
-                    $summary['created_layers'],
-                    $summary['updated_layers'],
-                    $summary['skipped_conflicts'],
-                )
-            );
+            ->with('status', $status);
     }
 
     private function reviewSessionKey(Supplier $supplier): string

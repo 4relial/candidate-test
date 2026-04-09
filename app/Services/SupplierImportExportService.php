@@ -157,8 +157,11 @@ class SupplierImportExportService implements SupplierImportExportServiceInterfac
                     continue;
                 }
 
-                $summary['updated_layups']++;
-                $this->syncLayers($existingLayup, $layupData['layers'], $summary, true);
+                $layupWasChanged = $this->syncLayers($existingLayup, $layupData['layers'], $summary, true);
+
+                if ($layupWasChanged) {
+                    $summary['updated_layups']++;
+                }
             }
         });
 
@@ -221,14 +224,17 @@ class SupplierImportExportService implements SupplierImportExportServiceInterfac
      * @param  array<int, array<string, mixed>>  $layers
      * @param  array<string, int>  $summary
      */
-    private function syncLayers(Layup $layup, array $layers, array &$summary, bool $overwriteExisting): void
+    private function syncLayers(Layup $layup, array $layers, array &$summary, bool $overwriteExisting): bool
     {
+        $changed = false;
+
         foreach ($layers as $incomingLayer) {
             $existingLayer = $layup->layers()->where('layer_order', $incomingLayer['layer_order'])->first();
 
             if (! $existingLayer) {
                 $layup->layers()->create($incomingLayer);
                 $summary['created_layers']++;
+                $changed = true;
 
                 continue;
             }
@@ -248,7 +254,10 @@ class SupplierImportExportService implements SupplierImportExportServiceInterfac
                 'layer_order' => $incomingLayer['layer_order'],
             ]);
             $summary['updated_layers']++;
+            $changed = true;
         }
+
+        return $changed;
     }
 
     /**

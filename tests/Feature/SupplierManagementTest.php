@@ -246,6 +246,42 @@ class SupplierManagementTest extends TestCase
         ]);
     }
 
+    public function test_reimporting_identical_data_reports_no_changes_detected(): void
+    {
+        $user = User::factory()->create();
+        $supplier = Supplier::factory()->create();
+        $layup = Layup::factory()->for($supplier)->create(['name' => 'Same Layup']);
+
+        Layer::factory()->for($layup)->create([
+            'layer_order' => 1,
+            'thickness' => 20,
+            'width' => 100,
+            'angle' => 0,
+        ]);
+
+        $payload = [
+            'supplier' => [
+                'name' => 'External Supplier',
+                'layups' => [[
+                    'name' => 'Same Layup',
+                    'layers' => [[
+                        'layer_order' => 1,
+                        'thickness' => 20,
+                        'width' => 100,
+                        'angle' => 0,
+                    ]],
+                ]],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->post(route('suppliers.import', $supplier), [
+                'payload' => json_encode($payload, JSON_PRETTY_PRINT),
+            ])
+            ->assertRedirect(route('suppliers.show', $supplier))
+            ->assertSessionHas('status', 'Import completed: no changes detected. Existing layups and layers already match the JSON payload.');
+    }
+
     public function test_conflicting_import_can_be_resolved_one_by_one_with_duplicate_option(): void
     {
         $user = User::factory()->create();
