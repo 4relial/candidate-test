@@ -4,9 +4,11 @@
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 Suppliers
             </h2>
-            <a href="{{ route('suppliers.create') }}" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
-                Add Supplier
-            </a>
+            @can('manage-suppliers')
+                <a href="{{ route('suppliers.create') }}" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
+                    Add Supplier
+                </a>
+            @endcan
         </div>
     </x-slot>
 
@@ -17,6 +19,12 @@
                     {{ session('status') }}
                 </div>
             @endif
+
+            @cannot('manage-suppliers')
+                <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+                    You currently have <span class="font-semibold">view-only access</span>. Supplier data can be viewed and exported, but only allowed users can manage it.
+                </div>
+            @endcannot
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
                 <div class="p-6 text-gray-900 dark:text-gray-100">
@@ -37,12 +45,14 @@
                                         <td class="py-3">
                                             <div class="flex flex-wrap gap-2">
                                                 <a href="{{ route('suppliers.show', $supplier) }}" class="text-indigo-600">View</a>
-                                                <a href="{{ route('suppliers.edit', $supplier) }}" class="text-amber-600">Edit</a>
-                                                <form method="POST" action="{{ route('suppliers.destroy', $supplier) }}" onsubmit="return confirm('Delete this supplier?')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-red-600">Delete</button>
-                                                </form>
+                                                @can('manage-suppliers')
+                                                    <a href="{{ route('suppliers.edit', $supplier) }}" class="text-amber-600">Edit</a>
+                                                    <form method="POST" action="{{ route('suppliers.destroy', $supplier) }}" onsubmit="return confirm('Delete this supplier?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-red-600">Delete</button>
+                                                    </form>
+                                                @endcan
                                             </div>
                                         </td>
                                     </tr>

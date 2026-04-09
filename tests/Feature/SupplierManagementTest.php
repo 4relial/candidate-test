@@ -13,6 +13,14 @@ class SupplierManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('suppliers.access_mode', 'all');
+        config()->set('suppliers.allowed_emails', []);
+    }
+
     public function test_authenticated_user_can_create_supplier_layup_and_layer(): void
     {
         $user = User::factory()->create();

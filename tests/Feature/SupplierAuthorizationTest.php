@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,6 +21,30 @@ class SupplierAuthorizationTest extends TestCase
         $this->actingAs($user)
             ->get(route('suppliers.index'))
             ->assertOk();
+
+        $this->actingAs($user)
+            ->get(route('suppliers.create'))
+            ->assertOk();
+    }
+
+    public function test_users_can_still_view_supplier_pages_when_mode_is_emails(): void
+    {
+        config()->set('suppliers.access_mode', 'emails');
+        config()->set('suppliers.allowed_emails', ['allowed@example.com']);
+
+        $blockedUser = User::factory()->create(['email' => 'blocked@example.com']);
+        $supplier = Supplier::factory()->create();
+
+        $this->actingAs($blockedUser)
+            ->get(route('suppliers.index'))
+            ->assertOk()
+            ->assertDontSee('Add Supplier');
+
+        $this->actingAs($blockedUser)
+            ->get(route('suppliers.show', $supplier))
+            ->assertOk()
+            ->assertDontSee('Edit Supplier')
+            ->assertDontSee('Analyze Import');
     }
 
     public function test_only_configured_emails_can_manage_suppliers_when_mode_is_emails(): void
@@ -31,11 +56,17 @@ class SupplierAuthorizationTest extends TestCase
         $blockedUser = User::factory()->create(['email' => 'blocked@example.com']);
 
         $this->actingAs($allowedUser)
-            ->get(route('suppliers.index'))
+            ->get(route('suppliers.create'))
             ->assertOk();
 
         $this->actingAs($blockedUser)
-            ->get(route('suppliers.index'))
+            ->get(route('suppliers.create'))
+            ->assertForbidden();
+
+        $this->actingAs($blockedUser)
+            ->post(route('suppliers.store'), [
+                'name' => 'Blocked Supplier',
+            ])
             ->assertForbidden();
     }
 }
