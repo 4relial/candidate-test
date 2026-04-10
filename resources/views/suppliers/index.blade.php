@@ -27,7 +27,20 @@
             @endcannot
 
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg overflow-hidden">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
+                <div class="p-6 text-gray-900 dark:text-gray-100 space-y-4">
+                    <form method="GET" action="{{ route('suppliers.index') }}" class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                        <div class="w-full md:max-w-md">
+                            <label for="search" class="mb-1 block text-sm font-medium">Search Supplier Name</label>
+                            <input id="search" type="text" name="search" value="{{ $search ?? '' }}" placeholder="Type supplier name..." class="w-full rounded-md border-gray-300">
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="submit" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Search</button>
+                            @if (! empty($search))
+                                <a href="{{ route('suppliers.index') }}" class="rounded-md border border-gray-300 px-4 py-2 text-sm">Reset</a>
+                            @endif
+                        </div>
+                    </form>
+
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead>

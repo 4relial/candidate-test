@@ -340,4 +340,43 @@ class SupplierManagementTest extends TestCase
             'angle' => 45.0,
         ]);
     }
+
+    public function test_supplier_index_can_search_by_name(): void
+    {
+        $user = User::factory()->create();
+
+        Supplier::factory()->create(['name' => 'Alpha Timber']);
+        Supplier::factory()->create(['name' => 'Beta Wood']);
+
+        $this->actingAs($user)
+            ->get(route('suppliers.index', ['search' => 'Alpha']))
+            ->assertOk()
+            ->assertSee('Alpha Timber')
+            ->assertDontSee('Beta Wood');
+    }
+
+    public function test_supplier_show_can_search_clt_layups_by_name_and_paginate(): void
+    {
+        $user = User::factory()->create();
+        $supplier = Supplier::factory()->create();
+
+        foreach (range(1, 6) as $index) {
+            Layup::factory()->for($supplier)->create(['name' => 'Panel '.$index]);
+        }
+
+        Layup::factory()->for($supplier)->create(['name' => 'Special CLT']);
+
+        $this->actingAs($user)
+            ->get(route('suppliers.show', ['supplier' => $supplier, 'layup_search' => 'Special']))
+            ->assertOk()
+            ->assertSee('Special CLT')
+            ->assertDontSee('Panel 1');
+
+        $this->actingAs($user)
+            ->get(route('suppliers.show', $supplier))
+            ->assertOk()
+            ->assertSee('Panel 1')
+            ->assertSee('Panel 5')
+            ->assertDontSee('Panel 6');
+    }
 }

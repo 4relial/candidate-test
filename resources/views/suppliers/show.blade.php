@@ -59,7 +59,20 @@
                     </div>
 
                     <div class="space-y-4 p-6 text-gray-900 dark:text-gray-100">
-                        @forelse ($supplier->layups as $layup)
+                        <form method="GET" action="{{ route('suppliers.show', $supplier) }}" class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                            <div class="w-full md:max-w-md">
+                                <label for="layup_search" class="mb-1 block text-sm font-medium">Search CLT Layup Name</label>
+                                <input id="layup_search" type="text" name="layup_search" value="{{ $layupSearch ?? '' }}" placeholder="Type layup name..." class="w-full rounded-md border-gray-300">
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="submit" class="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">Search</button>
+                                @if (! empty($layupSearch))
+                                    <a href="{{ route('suppliers.show', $supplier) }}" class="rounded-md border border-gray-300 px-4 py-2 text-sm">Reset</a>
+                                @endif
+                            </div>
+                        </form>
+
+                        @forelse ($layups as $layup)
                             <div class="rounded-lg border border-gray-200 p-4">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
@@ -122,8 +135,12 @@
                                 </div>
                             </div>
                         @empty
-                            <p class="text-sm text-gray-500">No layups yet.</p>
+                            <p class="text-sm text-gray-500">No layups found.</p>
                         @endforelse
+
+                        <div>
+                            {{ $layups->links() }}
+                        </div>
                     </div>
                 </div>
 

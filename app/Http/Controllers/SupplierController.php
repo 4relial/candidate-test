@@ -18,11 +18,18 @@ class SupplierController extends Controller
     ) {
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $suppliers = Supplier::withCount('layups')->latest()->paginate(10);
+        $search = trim((string) $request->query('search'));
 
-        return view('suppliers.index', compact('suppliers'));
+        $suppliers = Supplier::query()
+            ->withCount('layups')
+            ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('suppliers.index', compact('suppliers', 'search'));
     }
 
     public function create(): View
@@ -39,11 +46,25 @@ class SupplierController extends Controller
             ->with('status', 'Supplier created successfully.');
     }
 
-    public function show(Supplier $supplier): View
+    public function show(Request $request, Supplier $supplier): View
     {
-        $supplier->load(['layups.layers']);
+        $layupSearch = trim((string) $request->query('layup_search'));
 
-        return view('suppliers.show', compact('supplier'));
+        $supplier->load([
+            'layups' => fn ($query) => $query
+                ->when($layupSearch !== '', fn ($innerQuery) => $innerQuery->where('name', 'like', "%{$layupSearch}%"))
+                ->with('layers')
+                ->orderBy('name'),
+        ]);
+
+        $layups = $supplier->layups()
+            ->when($layupSearch !== '', fn ($query) => $query->where('name', 'like', "%{$layupSearch}%"))
+            ->with('layers')
+            ->orderBy('name')
+            ->paginate(5, ['*'], 'layup_page')
+            ->withQueryString();
+
+        return view('suppliers.show', compact('supplier', 'layups', 'layupSearch'));
     }
 
     public function edit(Supplier $supplier): View
