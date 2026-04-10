@@ -159,7 +159,16 @@ class SupplierManagementTest extends TestCase
 </Workbook>
 XML;
 
-        $file = UploadedFile::fake()->createWithContent('supplier.xls', $excelContent);
+        $tempFile = tempnam(sys_get_temp_dir(), 'supplier-xls');
+        file_put_contents($tempFile, $excelContent);
+
+        $file = new UploadedFile(
+            $tempFile,
+            'supplier.xls',
+            'text/xml',
+            null,
+            true,
+        );
 
         $this->actingAs($user)
             ->post(route('suppliers.import', $supplier), [

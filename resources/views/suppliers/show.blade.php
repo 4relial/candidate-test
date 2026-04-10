@@ -175,7 +175,7 @@
 
                                 <div>
                                     <label class="mb-1 block text-sm font-medium">Import File (optional)</label>
-                                    <input type="file" name="import_file" accept=".json,.txt,.csv,.xls,.xlsx" class="w-full rounded-md border-gray-300">
+                                    <input type="file" name="import_file" accept=".json,.csv,.xls,.xlsx" class="w-full rounded-md border-gray-300">
                                 </div>
 
                                 <div>

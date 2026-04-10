@@ -24,7 +24,7 @@ class SupplierImportRequest extends FormRequest
         return [
             'strategy' => ['nullable', 'in:skip,overwrite,duplicate,reject'],
             'payload' => ['nullable', 'string', 'required_without:import_file'],
-            'import_file' => ['nullable', 'file', 'mimes:json,txt,csv,xls,xlsx'],
+            'import_file' => ['nullable', 'file', 'extensions:json,csv,xls,xlsx'],
         ];
     }
 
