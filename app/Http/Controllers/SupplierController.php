@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class SupplierController extends Controller
@@ -90,10 +91,33 @@ class SupplierController extends Controller
             ->with('status', 'Supplier deleted successfully.');
     }
 
-    public function export(Supplier $supplier): JsonResponse
+    public function export(Request $request, Supplier $supplier): JsonResponse|Response
     {
+        $export = $this->supplierTransferService->export($supplier);
+        $format = strtolower((string) $request->query('format', 'json'));
+
+        if ($format === 'csv') {
+            $rows = $this->flattenSupplierExportRows($export['supplier']);
+            $content = $this->buildCsvContent($rows);
+
+            return response($content, 200, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="supplier-'.$supplier->id.'.csv"',
+            ]);
+        }
+
+        if (in_array($format, ['excel', 'xls', 'xlsx'], true)) {
+            $rows = $this->flattenSupplierExportRows($export['supplier']);
+            $xml = $this->buildExcelXml($rows);
+
+            return response($xml, 200, [
+                'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="supplier-'.$supplier->id.'.xls"',
+            ]);
+        }
+
         return response()
-            ->json($this->supplierTransferService->export($supplier))
+            ->json($export)
             ->header('Content-Disposition', 'attachment; filename="supplier-'.$supplier->id.'.json"');
     }
 
@@ -105,7 +129,7 @@ class SupplierController extends Controller
         if ($analysis['payload']['layups'] === []) {
             return redirect()
                 ->route('suppliers.show', $supplier)
-                ->withErrors(['payload' => 'No layups found in the provided JSON payload.']);
+                ->withErrors(['payload' => 'No layups found in the provided import data.']);
         }
 
         $strategy = $request->input('strategy');
@@ -247,5 +271,110 @@ class SupplierController extends Controller
     private function reviewSessionKey(Supplier $supplier): string
     {
         return 'supplier_import_review.'.$supplier->id;
+    }
+
+    /**
+     * @param  array<int, array<int, string|int|float>>  $rows
+     */
+    private function buildCsvContent(array $rows): string
+    {
+        $csvRows = [
+            ['supplier_name', 'layup_name', 'layer_order', 'thickness', 'width', 'angle'],
+            ...$rows,
+        ];
+
+        return collect($csvRows)
+            ->map(fn (array $row): string => collect($row)
+                ->map(function ($value): string {
+                    $stringValue = (string) $value;
+
+                    if (str_contains($stringValue, '"')) {
+                        $stringValue = str_replace('"', '""', $stringValue);
+                    }
+
+                    if (strpbrk($stringValue, ",\n\r\"") !== false) {
+                        return '"'.$stringValue.'"';
+                    }
+
+                    return $stringValue;
+                })
+                ->implode(','))
+            ->implode("\n")."\n";
+    }
+
+    /**
+     * @param  array<string, mixed>  $supplier
+     * @return array<int, array<int, string|int|float>>
+     */
+    private function flattenSupplierExportRows(array $supplier): array
+    {
+        $rows = [];
+
+        foreach ((array) ($supplier['layups'] ?? []) as $layup) {
+            $layers = (array) ($layup['layers'] ?? []);
+
+            if ($layers === []) {
+                $rows[] = [
+                    (string) ($supplier['name'] ?? ''),
+                    (string) ($layup['name'] ?? ''),
+                    '',
+                    '',
+                    '',
+                    '',
+                ];
+
+                continue;
+            }
+
+            foreach ($layers as $layer) {
+                $rows[] = [
+                    (string) ($supplier['name'] ?? ''),
+                    (string) ($layup['name'] ?? ''),
+                    (string) ($layer['layer_order'] ?? ''),
+                    (string) ($layer['thickness'] ?? ''),
+                    (string) ($layer['width'] ?? ''),
+                    (string) ($layer['angle'] ?? ''),
+                ];
+            }
+        }
+
+        if ($rows === []) {
+            $rows[] = [(string) ($supplier['name'] ?? ''), '', '', '', '', ''];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<int, array<int, string|int|float>>  $rows
+     */
+    private function buildExcelXml(array $rows): string
+    {
+        $xmlRows = [
+            ['supplier_name', 'layup_name', 'layer_order', 'thickness', 'width', 'angle'],
+            ...$rows,
+        ];
+
+        $rowMarkup = collect($xmlRows)->map(function (array $row): string {
+            $cells = collect($row)->map(function ($value): string {
+                $escaped = htmlspecialchars((string) $value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+
+                return '<Cell><Data ss:Type="String">'.$escaped.'</Data></Cell>';
+            })->implode('');
+
+            return '<Row>'.$cells.'</Row>';
+        })->implode('');
+
+        return <<<XML
+<?xml version="1.0"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+    <Worksheet ss:Name="SupplierExport">
+        <Table>
+            {$rowMarkup}
+        </Table>
+    </Worksheet>
+</Workbook>
+XML;
     }
 }

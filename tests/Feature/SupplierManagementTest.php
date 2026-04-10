@@ -7,6 +7,7 @@ use App\Models\Layup;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class SupplierManagementTest extends TestCase
@@ -69,6 +70,107 @@ class SupplierManagementTest extends TestCase
             ->assertJsonPath('supplier.id', $supplier->id)
             ->assertJsonCount(1, 'supplier.layups')
             ->assertJsonCount(2, 'supplier.layups.0.layers');
+    }
+
+    public function test_export_can_return_csv_and_excel_formats(): void
+    {
+        $user = User::factory()->create();
+        $supplier = Supplier::factory()->create(['name' => 'PT Export']);
+        $layup = Layup::factory()->for($supplier)->create(['name' => 'Export Layup']);
+        Layer::factory()->for($layup)->create([
+            'layer_order' => 1,
+            'thickness' => 35,
+            'width' => 120,
+            'angle' => 0,
+        ]);
+
+        $csvResponse = $this->actingAs($user)
+            ->get(route('suppliers.export', ['supplier' => $supplier, 'format' => 'csv']));
+
+        $csvResponse->assertOk();
+        $this->assertStringContainsString('text/csv', (string) $csvResponse->headers->get('content-type'));
+        $this->assertStringContainsString('PT Export,Export Layup,1,35,120,0', $csvResponse->getContent());
+
+        $excelResponse = $this->actingAs($user)
+            ->get(route('suppliers.export', ['supplier' => $supplier, 'format' => 'excel']));
+
+        $excelResponse->assertOk();
+        $this->assertStringContainsString('application/vnd.ms-excel', (string) $excelResponse->headers->get('content-type'));
+        $this->assertStringContainsString('<Workbook', $excelResponse->getContent());
+    }
+
+    public function test_import_can_read_csv_file(): void
+    {
+        $user = User::factory()->create();
+        $supplier = Supplier::factory()->create();
+
+        $file = UploadedFile::fake()->createWithContent('supplier.csv', implode("\n", [
+            'layup_name,layer_order,thickness,width,angle',
+            'CSV Layup,1,32,140,0',
+            'CSV Layup,2,28,110,90',
+        ]));
+
+        $this->actingAs($user)
+            ->post(route('suppliers.import', $supplier), [
+                'import_file' => $file,
+            ])
+            ->assertRedirect(route('suppliers.show', $supplier));
+
+        $this->assertDatabaseHas('clt_layups', [
+            'supplier_id' => $supplier->id,
+            'name' => 'CSV Layup',
+        ]);
+
+        $this->assertDatabaseHas('clt_layers', [
+            'layer_order' => 2,
+            'thickness' => 28.0,
+            'width' => 110.0,
+            'angle' => 90.0,
+        ]);
+    }
+
+    public function test_import_can_read_excel_xml_file(): void
+    {
+        $user = User::factory()->create();
+        $supplier = Supplier::factory()->create();
+
+        $excelContent = <<<'XML'
+<?xml version="1.0"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+    <Worksheet ss:Name="SupplierExport">
+        <Table>
+            <Row>
+                <Cell><Data ss:Type="String">layup_name</Data></Cell>
+                <Cell><Data ss:Type="String">layer_order</Data></Cell>
+                <Cell><Data ss:Type="String">thickness</Data></Cell>
+                <Cell><Data ss:Type="String">width</Data></Cell>
+                <Cell><Data ss:Type="String">angle</Data></Cell>
+            </Row>
+            <Row>
+                <Cell><Data ss:Type="String">Excel Layup</Data></Cell>
+                <Cell><Data ss:Type="Number">1</Data></Cell>
+                <Cell><Data ss:Type="Number">30</Data></Cell>
+                <Cell><Data ss:Type="Number">150</Data></Cell>
+                <Cell><Data ss:Type="Number">45</Data></Cell>
+            </Row>
+        </Table>
+    </Worksheet>
+</Workbook>
+XML;
+
+        $file = UploadedFile::fake()->createWithContent('supplier.xls', $excelContent);
+
+        $this->actingAs($user)
+            ->post(route('suppliers.import', $supplier), [
+                'import_file' => $file,
+            ])
+            ->assertRedirect(route('suppliers.show', $supplier));
+
+        $this->assertDatabaseHas('clt_layups', [
+            'supplier_id' => $supplier->id,
+            'name' => 'Excel Layup',
+        ]);
     }
 
     public function test_import_with_overwrite_updates_existing_conflicting_layer(): void

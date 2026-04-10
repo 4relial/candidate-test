@@ -148,10 +148,18 @@
                     <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg">
                         <div class="p-6 text-gray-900 dark:text-gray-100">
                             <h3 class="text-lg font-semibold">Export</h3>
-                            <p class="mt-2 text-sm text-gray-500">Download this supplier with all related layups and layers as JSON.</p>
-                            <a href="{{ route('suppliers.export', $supplier) }}" class="mt-4 inline-flex rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">
-                                Export JSON
-                            </a>
+                            <p class="mt-2 text-sm text-gray-500">Download this supplier with all related layups and layers as JSON, CSV, or Excel.</p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="{{ route('suppliers.export', ['supplier' => $supplier, 'format' => 'json']) }}" class="inline-flex rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white">
+                                    Export JSON
+                                </a>
+                                <a href="{{ route('suppliers.export', ['supplier' => $supplier, 'format' => 'csv']) }}" class="inline-flex rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
+                                    Export CSV
+                                </a>
+                                <a href="{{ route('suppliers.export', ['supplier' => $supplier, 'format' => 'excel']) }}" class="inline-flex rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
+                                    Export Excel
+                                </a>
+                            </div>
                         </div>
                     </div>
 
@@ -162,12 +170,12 @@
 
                                 <div>
                                     <h3 class="text-lg font-semibold">Import</h3>
-                                    <p class="mt-2 text-sm text-gray-500">Paste JSON or upload a `.json` file. If conflicts are found, you will review them one by one.</p>
+                                    <p class="mt-2 text-sm text-gray-500">Paste JSON or upload a `.json`, `.csv`, `.xls`, or `.xlsx` file. If conflicts are found, you will review them one by one.</p>
                                 </div>
 
                                 <div>
                                     <label class="mb-1 block text-sm font-medium">Import File (optional)</label>
-                                    <input type="file" name="import_file" accept=".json,.txt" class="w-full rounded-md border-gray-300">
+                                    <input type="file" name="import_file" accept=".json,.txt,.csv,.xls,.xlsx" class="w-full rounded-md border-gray-300">
                                 </div>
 
                                 <div>
